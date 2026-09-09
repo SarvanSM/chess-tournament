@@ -138,6 +138,54 @@
 
 
   // =========================================================
+  // AUTOMATIC TODAY STATUS
+  // =========================================================
+
+  function getTodayDateKey() {
+    const today = new Date();
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
+
+  function getMatchDateKey(date) {
+    if (!date) {
+      return "";
+    }
+
+    // Dates created by the date input are already YYYY-MM-DD.
+    // For timestamp values, only the calendar-date portion is used.
+    return String(date).slice(0, 10);
+  }
+
+
+  function updateTodayPendingMatches() {
+    const today = getTodayDateKey();
+
+    $matches.forEach((match) => {
+      if (
+        match.status === "Scheduled" &&
+        match.result === "Pending" &&
+        getMatchDateKey(match.date) === today
+      ) {
+        updateMatch(match.id, {
+          status: "Ongoing"
+        });
+      }
+    });
+  }
+
+
+  // Keep pending matches scheduled for future dates, but automatically
+  // move today's pending matches to Ongoing. Completed matches are never changed.
+  $: updateTodayPendingMatches();
+
+
+  // =========================================================
   // DATE
   // =========================================================
 
