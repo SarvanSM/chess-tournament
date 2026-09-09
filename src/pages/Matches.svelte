@@ -477,104 +477,125 @@
 
   function generateMatches(tournament) {
 
-    if (!tournament) {
-      alert(
-        "Please select a valid tournament."
-      );
+  if (!tournament) {
+    alert(
+      "Please select a valid tournament."
+    );
 
-      return;
-    }
-
-
-    if (
-      !Array.isArray(
-        tournament.playerIds
-      ) ||
-      tournament.playerIds.length < 2
-    ) {
-      alert(
-        "This tournament needs at least 2 players."
-      );
-
-      return;
-    }
-
-
-    // -------------------------------------------------------
-    // GET ALL EXISTING MATCHES FOR THIS TOURNAMENT
-    // -------------------------------------------------------
-
-    const existingMatches =
-      $matches.filter((match) => {
-
-        return (
-          String(match.tournamentId) ===
-          String(tournament.id)
-        );
-
-      });
-
-
-    // -------------------------------------------------------
-    // FIND THE NEXT ROUND
-    // -------------------------------------------------------
-
-    const currentRounds =
-      existingMatches.map((match) => {
-
-        return Number(
-          match.round || 1
-        );
-
-      });
-
-
-    const highestRound =
-      currentRounds.length > 0
-        ? Math.max(...currentRounds)
-        : 0;
-
-
-    const nextRound =
-      highestRound + 1;
-
-
-    // -------------------------------------------------------
-    // GENERATE RANDOM MATCHES
-    // -------------------------------------------------------
-
-    const newMatches =
-      createMatchesForTournament(
-        tournament.id,
-        tournament.playerIds,
-        nextRound
-      );
-
-
-    // -------------------------------------------------------
-    // SHOW RESULT
-    // -------------------------------------------------------
-
-    if (newMatches.length > 0) {
-
-      alert(
-        `${newMatches.length} match${
-          newMatches.length === 1
-            ? ""
-            : "es"
-        } generated successfully for Round ${nextRound}.`
-      );
-
-    }
-
-    else {
-
-      alert(
-        "No new matches were generated."
-      );
-
-    }
+    return;
   }
+
+
+  if (
+    !Array.isArray(tournament.playerIds)
+  ) {
+    alert(
+      "This tournament has no registered players."
+    );
+
+    return;
+  }
+
+
+  const validPlayerIds =
+    tournament.playerIds.filter((playerId) => {
+
+      return $players.some((player) => {
+
+        return String(player.id) ===
+          String(playerId);
+
+      });
+
+    });
+
+
+  if (validPlayerIds.length < 2) {
+
+    alert(
+      "This tournament needs at least 2 valid players."
+    );
+
+    return;
+  }
+
+
+  // -------------------------------------------------------
+  // GET ALL EXISTING MATCHES FOR THIS TOURNAMENT
+  // -------------------------------------------------------
+
+  const existingMatches =
+    $matches.filter((match) => {
+
+      return (
+        String(match.tournamentId) ===
+        String(tournament.id)
+      );
+
+    });
+
+
+  // -------------------------------------------------------
+  // FIND THE NEXT ROUND
+  // -------------------------------------------------------
+
+  const currentRounds =
+    existingMatches.map((match) => {
+
+      return Number(
+        match.round || 1
+      );
+
+    });
+
+
+  const highestRound =
+    currentRounds.length > 0
+      ? Math.max(...currentRounds)
+      : 0;
+
+
+  const nextRound =
+    highestRound + 1;
+
+
+  // -------------------------------------------------------
+  // GENERATE RANDOM MATCHES
+  // -------------------------------------------------------
+
+  const newMatches =
+    createMatchesForTournament(
+      tournament.id,
+      validPlayerIds,
+      nextRound
+    );
+
+
+  // -------------------------------------------------------
+  // SHOW RESULT
+  // -------------------------------------------------------
+
+  if (newMatches.length > 0) {
+
+    alert(
+      `${newMatches.length} match${
+        newMatches.length === 1
+          ? ""
+          : "es"
+      } generated successfully for Round ${nextRound}.`
+    );
+
+  }
+
+  else {
+
+    alert(
+      "No new matches were generated."
+    );
+
+  }
+
+}
 
 
   // =========================================================
