@@ -41,3 +41,50 @@ If you have state that's important to retain within a component, consider creati
 import { writable } from 'svelte/store'
 export default writable(0)
 ```
+## Features
+
+- Player Management
+  - Create players
+  - View players
+  - Update players
+  - Delete players
+
+- Tournament Management
+  - Create tournaments
+  - View tournaments
+  - Update tournaments
+  - Delete tournaments
+  - Add players to tournaments
+
+- Match System
+  - Generate random player pairings
+  - Randomly select match winners
+  - Record match results
+  - Track completed matches
+
+- Ranking System
+  - Calculate player points
+  - Display player rankings
+  - Show top 3 players
+
+- Dashboard
+  - Total players
+  - Total tournaments
+  - Total matches
+  - Completed matches
+  - Recent tournaments
+  - Top players
+
+## Technology Stack
+
+- Svelte
+- JavaScript
+- Vite
+- LocalStorage
+
+## Running the Project
+
+Install dependencies:
+
+```bash
+npm install
