@@ -413,6 +413,7 @@ export function setMatchResult(
     Number(player2Score);
 
   let result = "Draw";
+  let winnerId = null;
 
   if (score1 > score2) {
     result = "Player 1 Won";
@@ -429,12 +430,26 @@ export function setMatchResult(
         return match;
       }
 
+      if (score1 > score2) {
+        winnerId = match.player1Id;
+      }
+
+      else if (score2 > score1) {
+        winnerId = match.player2Id;
+      }
+
+      else {
+        winnerId = null;
+      }
+
       return {
         ...match,
 
         player1Score: score1,
 
         player2Score: score2,
+
+        winnerId,
 
         result,
 
@@ -468,6 +483,8 @@ export function setMatchWinner(
       let player2Score =
         match.player2Score;
 
+      let finalWinnerId = null;
+
 
       if (
         winnerId === match.player1Id
@@ -476,7 +493,11 @@ export function setMatchWinner(
 
         player1Score = 1;
         player2Score = 0;
+
+        finalWinnerId =
+          match.player1Id;
       }
+
 
       else if (
         winnerId === match.player2Id
@@ -485,7 +506,11 @@ export function setMatchWinner(
 
         player1Score = 0;
         player2Score = 1;
+
+        finalWinnerId =
+          match.player2Id;
       }
+
 
       else if (
         winnerId === "draw" ||
@@ -496,6 +521,8 @@ export function setMatchWinner(
 
         player1Score = 0.5;
         player2Score = 0.5;
+
+        finalWinnerId = null;
       }
 
 
@@ -505,6 +532,8 @@ export function setMatchWinner(
         player1Score,
 
         player2Score,
+
+        winnerId: finalWinnerId,
 
         result,
 

@@ -1,21 +1,16 @@
 <script>
   import { onMount } from "svelte";
-
   import { matches } from "../stores/matches.js";
-
 
   // =========================================================
   // STATE
   // =========================================================
 
   let players = [];
-
-  let searchText = "";
-
-  let selectedTournament = "All";
-
   let tournaments = [];
 
+  let searchText = "";
+  let selectedTournament = "All";
 
   // =========================================================
   // LOAD PLAYERS
@@ -23,8 +18,7 @@
 
   function loadPlayers() {
     try {
-      const saved =
-        localStorage.getItem("chess_players");
+      const saved = localStorage.getItem("chess_players");
 
       if (!saved) {
         return [];
@@ -32,20 +26,12 @@
 
       const parsed = JSON.parse(saved);
 
-      return Array.isArray(parsed)
-        ? parsed
-        : [];
-
+      return Array.isArray(parsed) ? parsed : [];
     } catch (error) {
-      console.error(
-        "Failed to load players:",
-        error
-      );
-
+      console.error("Failed to load players:", error);
       return [];
     }
   }
-
 
   // =========================================================
   // LOAD TOURNAMENTS
@@ -53,10 +39,7 @@
 
   function loadTournaments() {
     try {
-      const saved =
-        localStorage.getItem(
-          "chess_tournaments"
-        );
+      const saved = localStorage.getItem("chess_tournaments");
 
       if (!saved) {
         return [];
@@ -64,20 +47,21 @@
 
       const parsed = JSON.parse(saved);
 
-      return Array.isArray(parsed)
-        ? parsed
-        : [];
-
+      return Array.isArray(parsed) ? parsed : [];
     } catch (error) {
-      console.error(
-        "Failed to load tournaments:",
-        error
-      );
-
+      console.error("Failed to load tournaments:", error);
       return [];
     }
   }
 
+  // =========================================================
+  // REFRESH DATA
+  // =========================================================
+
+  function refreshData() {
+    players = loadPlayers();
+    tournaments = loadTournaments();
+  }
 
   // =========================================================
   // INITIAL LOAD
@@ -87,32 +71,26 @@
     refreshData();
   });
 
-
-  function refreshData() {
-    players = loadPlayers();
-    tournaments = loadTournaments();
-  }
-
-
   // =========================================================
   // PLAYER NAME
   // =========================================================
 
   function getPlayerName(playerId) {
-
-    if (!playerId) {
+    if (
+      playerId === null ||
+      playerId === undefined ||
+      playerId === ""
+    ) {
       return "Unknown Player";
     }
 
-    const player =
-      players.find(
-        (item) =>
-          String(item.id) ===
-          String(playerId)
-      );
+    const player = players.find(
+      (item) =>
+        String(item.id) === String(playerId)
+    );
 
     if (!player) {
-      return String(playerId);
+      return "Unknown Player";
     }
 
     return (
@@ -120,30 +98,32 @@
       player.fullName ||
       player.playerName ||
       player.username ||
+      player.email ||
       "Unknown Player"
     );
   }
-
 
   // =========================================================
   // TOURNAMENT NAME
   // =========================================================
 
   function getTournamentName(tournamentId) {
-
-    if (!tournamentId) {
+    if (
+      tournamentId === null ||
+      tournamentId === undefined ||
+      tournamentId === ""
+    ) {
       return "Unknown Tournament";
     }
 
-    const tournament =
-      tournaments.find(
-        (item) =>
-          String(item.id) ===
-          String(tournamentId)
-      );
+    const tournament = tournaments.find(
+      (item) =>
+        String(item.id) ===
+        String(tournamentId)
+    );
 
     if (!tournament) {
-      return String(tournamentId);
+      return "Unknown Tournament";
     }
 
     return (
@@ -154,156 +134,171 @@
     );
   }
 
-
   // =========================================================
   // CREATE PLAYER STATISTICS
   // =========================================================
 
   function calculateRankings(allMatches) {
-
     const rankingMap = {};
 
-
     // -------------------------------------------------------
-    // CREATE PLAYER ENTRIES
+    // CREATE ENTRIES FOR ALL CURRENT PLAYERS
     // -------------------------------------------------------
 
     players.forEach((player) => {
-
       rankingMap[String(player.id)] = {
-
         playerId: player.id,
 
-        name: getPlayerName(player.id),
+        name:
+          player.name ||
+          player.fullName ||
+          player.playerName ||
+          player.username ||
+          player.email ||
+          "Unknown Player",
 
         points: 0,
-
         wins: 0,
-
         draws: 0,
-
         losses: 0,
-
         matchesPlayed: 0
-
       };
-
     });
 
-
     // -------------------------------------------------------
-    // PROCESS COMPLETED MATCHES
+    // PROCESS ONLY COMPLETED MATCHES
     // -------------------------------------------------------
 
     allMatches
       .filter(
         (match) =>
-          match.status === "Completed"
+          match &&
+          String(match.status).toLowerCase() ===
+            "completed"
       )
       .forEach((match) => {
-
         const player1Id =
-          String(match.player1Id);
+          match.player1Id !== null &&
+          match.player1Id !== undefined &&
+          match.player1Id !== ""
+            ? String(match.player1Id)
+            : null;
 
         const player2Id =
-          String(match.player2Id);
+          match.player2Id !== null &&
+          match.player2Id !== undefined &&
+          match.player2Id !== ""
+            ? String(match.player2Id)
+            : null;
 
+        // ---------------------------------------------------
+        // IGNORE INVALID / BYE MATCHES
+        // ---------------------------------------------------
 
-        // Make sure players exist
-        if (
-          !rankingMap[player1Id] ||
-          !rankingMap[player2Id]
-        ) {
+        if (!player1Id || !player2Id) {
           return;
         }
 
+        // ---------------------------------------------------
+        // GET PLAYER RECORDS
+        // ---------------------------------------------------
 
-        const player1 =
-          rankingMap[player1Id];
+        const player1 = rankingMap[player1Id];
+        const player2 = rankingMap[player2Id];
 
-        const player2 =
-          rankingMap[player2Id];
+        // ---------------------------------------------------
+        // IMPORTANT:
+        // Do NOT let one invalid match break the whole
+        // "All Tournaments" ranking calculation.
+        // ---------------------------------------------------
 
+        if (!player1 && !player2) {
+          return;
+        }
+
+        // If only one player exists, we cannot safely
+        // calculate a normal two-player result.
+        if (!player1 || !player2) {
+          return;
+        }
+
+        // ---------------------------------------------------
+        // MATCHES PLAYED
+        // ---------------------------------------------------
 
         player1.matchesPlayed += 1;
-
         player2.matchesPlayed += 1;
 
+        // ---------------------------------------------------
+        // READ SCORES
+        // ---------------------------------------------------
 
-        const score1 =
-          Number(match.player1Score || 0);
+        const score1 = Number(
+          match.player1Score ?? 0
+        );
 
-        const score2 =
-          Number(match.player2Score || 0);
-
+        const score2 = Number(
+          match.player2Score ?? 0
+        );
 
         // ---------------------------------------------------
         // PLAYER 1 WINS
         // ---------------------------------------------------
 
         if (score1 > score2) {
-
           player1.wins += 1;
-
           player1.points += 1;
 
           player2.losses += 1;
 
+          return;
         }
-
 
         // ---------------------------------------------------
         // PLAYER 2 WINS
         // ---------------------------------------------------
 
-        else if (score2 > score1) {
-
+        if (score2 > score1) {
           player2.wins += 1;
-
           player2.points += 1;
 
           player1.losses += 1;
 
+          return;
         }
-
 
         // ---------------------------------------------------
         // DRAW
         // ---------------------------------------------------
 
-        else {
+        player1.draws += 1;
+        player2.draws += 1;
 
-          player1.draws += 1;
-
-          player2.draws += 1;
-
-          player1.points += 0.5;
-
-          player2.points += 0.5;
-
-        }
-
+        player1.points += 0.5;
+        player2.points += 0.5;
       });
 
-
     // -------------------------------------------------------
-    // SORT
+    // ONLY RETURN PLAYERS WHO ACTUALLY PLAYED
     // -------------------------------------------------------
 
     return Object.values(rankingMap)
+      .filter(
+        (player) =>
+          player.matchesPlayed > 0
+      )
       .sort((a, b) => {
-
-        // First: points
+        // 1. Points
         if (b.points !== a.points) {
           return b.points - a.points;
         }
 
-        // Second: wins
+        // 2. Wins
         if (b.wins !== a.wins) {
           return b.wins - a.wins;
         }
 
-        // Third: matches played
+        // 3. Matches played
         if (
           b.matchesPlayed !==
           a.matchesPlayed
@@ -314,15 +309,12 @@
           );
         }
 
-        // Finally: alphabetical
+        // 4. Alphabetical
         return a.name.localeCompare(
           b.name
         );
-
       });
-
   }
-
 
   // =========================================================
   // TOURNAMENT FILTER
@@ -337,9 +329,8 @@
             String(selectedTournament)
         );
 
-
   // =========================================================
-  // RANKINGS
+  // CALCULATE RANKINGS
   // =========================================================
 
   $: rankings =
@@ -347,14 +338,12 @@
       tournamentMatches
     );
 
-
   // =========================================================
   // SEARCH FILTER
   // =========================================================
 
   $: filteredRankings =
     rankings.filter((player) => {
-
       const search =
         searchText
           .trim()
@@ -367,12 +356,10 @@
       return player.name
         .toLowerCase()
         .includes(search);
-
     });
 
-
   // =========================================================
-  // TOP 3
+  // TOP PLAYERS
   // =========================================================
 
   $: firstPlace =
@@ -384,56 +371,50 @@
   $: thirdPlace =
     filteredRankings[2] || null;
 
-
   // =========================================================
-  // TOTAL COMPLETED MATCHES
+  // COMPLETED MATCHES
   // =========================================================
 
   $: completedMatches =
     tournamentMatches.filter(
       (match) =>
-        match.status === "Completed"
+        match &&
+        String(match.status).toLowerCase() ===
+          "completed"
     ).length;
 
-
   // =========================================================
-  // TOTAL PLAYERS
+  // RANKED PLAYERS
   // =========================================================
 
   $: rankedPlayers =
-    filteredRankings.filter(
-      (player) =>
-        player.matchesPlayed > 0
-    ).length;
-
+    filteredRankings.length;
 
   // =========================================================
   // FORMAT POINTS
   // =========================================================
 
   function formatPoints(points) {
-
     if (Number.isInteger(points)) {
       return points;
     }
 
-    return points.toFixed(1);
-
+    return Number(points).toFixed(1);
   }
-
 
   // =========================================================
   // INITIALS
   // =========================================================
 
   function getInitials(name) {
-
     if (!name) {
       return "?";
     }
 
     const parts =
-      name.trim().split(/\s+/);
+      name
+        .trim()
+        .split(/\s+/);
 
     if (parts.length === 1) {
       return parts[0]
@@ -445,22 +426,16 @@
       parts[0].charAt(0) +
       parts[parts.length - 1].charAt(0)
     ).toUpperCase();
-
   }
-
 
   // =========================================================
   // CLEAR FILTERS
   // =========================================================
 
   function clearFilters() {
-
     searchText = "";
-
     selectedTournament = "All";
-
   }
-
 </script>
 
 
@@ -469,7 +444,6 @@
 ========================================================= -->
 
 <div class="rankings-page">
-
 
   <!-- =======================================================
        HEADER
@@ -581,7 +555,9 @@
 
         <strong>
           {firstPlace
-            ? formatPoints(firstPlace.points)
+            ? formatPoints(
+                firstPlace.points
+              )
             : "0"}
         </strong>
 
@@ -624,7 +600,10 @@
       {#each tournaments as tournament}
 
         <option value={tournament.id}>
-          {tournament.name}
+          {tournament.name ||
+            tournament.title ||
+            tournament.tournamentName ||
+            "Unnamed Tournament"}
         </option>
 
       {/each}
@@ -647,10 +626,14 @@
 
 
   <!-- =======================================================
-       PODIUM
+       RANKINGS CONTENT
   ======================================================== -->
 
   {#if filteredRankings.length > 0}
+
+    <!-- =====================================================
+         PODIUM
+    ====================================================== -->
 
     <div class="podium-section">
 
@@ -673,10 +656,7 @@
 
       <div class="podium">
 
-
-        <!-- =================================================
-             SECOND PLACE
-        ================================================== -->
+        <!-- SECOND PLACE -->
 
         {#if secondPlace}
 
@@ -687,7 +667,9 @@
             </div>
 
             <div class="podium-avatar">
-              {getInitials(secondPlace.name)}
+              {getInitials(
+                secondPlace.name
+              )}
             </div>
 
             <h3>
@@ -695,7 +677,9 @@
             </h3>
 
             <p>
-              {formatPoints(secondPlace.points)}
+              {formatPoints(
+                secondPlace.points
+              )}
               points
             </p>
 
@@ -710,9 +694,7 @@
         {/if}
 
 
-        <!-- =================================================
-             FIRST PLACE
-        ================================================== -->
+        <!-- FIRST PLACE -->
 
         {#if firstPlace}
 
@@ -727,7 +709,9 @@
             </div>
 
             <div class="podium-avatar">
-              {getInitials(firstPlace.name)}
+              {getInitials(
+                firstPlace.name
+              )}
             </div>
 
             <h3>
@@ -735,7 +719,9 @@
             </h3>
 
             <p>
-              {formatPoints(firstPlace.points)}
+              {formatPoints(
+                firstPlace.points
+              )}
               points
             </p>
 
@@ -750,9 +736,7 @@
         {/if}
 
 
-        <!-- =================================================
-             THIRD PLACE
-        ================================================== -->
+        <!-- THIRD PLACE -->
 
         {#if thirdPlace}
 
@@ -763,7 +747,9 @@
             </div>
 
             <div class="podium-avatar">
-              {getInitials(thirdPlace.name)}
+              {getInitials(
+                thirdPlace.name
+              )}
             </div>
 
             <h3>
@@ -771,7 +757,9 @@
             </h3>
 
             <p>
-              {formatPoints(thirdPlace.points)}
+              {formatPoints(
+                thirdPlace.points
+              )}
               points
             </p>
 
@@ -785,37 +773,14 @@
 
         {/if}
 
-
       </div>
 
     </div>
 
-  {:else}
 
-    <div class="empty-card">
-
-      <div class="empty-icon">
-        🏆
-      </div>
-
-      <h2>
-        No rankings yet
-      </h2>
-
-      <p>
-        Rankings will appear after completed matches are recorded.
-      </p>
-
-    </div>
-
-  {/if}
-
-
-  <!-- =======================================================
-       LEADERBOARD
-  ======================================================== -->
-
-  {#if filteredRankings.length > 0}
+    <!-- =====================================================
+         LEADERBOARD
+    ====================================================== -->
 
     <div class="leaderboard-card">
 
@@ -834,7 +799,8 @@
         </div>
 
         <span class="player-total">
-          {filteredRankings.length} players
+          {filteredRankings.length}
+          players
         </span>
 
       </div>
@@ -931,7 +897,9 @@
                   <div class="player-cell">
 
                     <div class="player-avatar">
-                      {getInitials(player.name)}
+                      {getInitials(
+                        player.name
+                      )}
                     </div>
 
                     <strong>
@@ -988,7 +956,9 @@
                 <td>
 
                   <strong class="points">
-                    {formatPoints(player.points)}
+                    {formatPoints(
+                      player.points
+                    )}
                   </strong>
 
                 </td>
@@ -1005,8 +975,29 @@
 
     </div>
 
-  {/if}
+  {:else}
 
+    <!-- =====================================================
+         EMPTY STATE
+    ====================================================== -->
+
+    <div class="empty-card">
+
+      <div class="empty-icon">
+        🏆
+      </div>
+
+      <h2>
+        No rankings yet
+      </h2>
+
+      <p>
+        Rankings will appear after completed matches are recorded.
+      </p>
+
+    </div>
+
+  {/if}
 
 </div>
 
@@ -1197,11 +1188,16 @@
     outline: none;
   }
 
+  .filter-card select:focus {
+    border-color: #d8b56a;
+  }
+
   .clear-button {
     height: 42px;
 
     padding: 0 16px;
 
+    border: none;
     border-radius: 10px;
 
     background: #171717;
@@ -1209,6 +1205,12 @@
 
     font-weight: 700;
     font-size: 12px;
+
+    cursor: pointer;
+  }
+
+  .clear-button:hover {
+    opacity: 0.9;
   }
 
 
@@ -1622,6 +1624,22 @@
 
     .podium-player h3 {
       font-size: 12px;
+    }
+
+    .podium-player p {
+      font-size: 11px;
+    }
+
+    .podium-avatar {
+      width: 58px;
+      height: 58px;
+      font-size: 17px;
+    }
+
+    .first .podium-avatar {
+      width: 68px;
+      height: 68px;
+      font-size: 20px;
     }
 
   }
